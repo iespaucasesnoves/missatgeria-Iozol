@@ -29,12 +29,5 @@ public class ReceptorXarxa extends BroadcastReceiver {
             //Xarxa no disponible
             Toast.makeText(context, "Xarxa no disponible", Toast.LENGTH_LONG).show();
         }
-
-        //Obtenim l’estat de la xarxa mòbil
-        networkInfo = connMgr.getNetworkInfo(ConnectivityManager.TYPE_MOBILE);
-        boolean connectat3G = networkInfo.isConnected();
-        //Obtenim l’estat de la xarxa Wifi
-        networkInfo = connMgr.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
-        boolean connectatWifi = networkInfo.isConnected();
     }
 }

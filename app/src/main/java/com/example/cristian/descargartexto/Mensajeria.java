@@ -29,11 +29,11 @@ import java.util.Map;
 
 public class Mensajeria extends AsyncTask<String, Integer, String>{
 
-    BufferedReader in = null;
-    int responseCode = -1;
-    ListAdapter adapter;
-    ListView lv;
-    Context context;
+    private BufferedReader in;
+    private int responseCode = -1;
+    private ListAdapter adapter;
+    private ListView lv;
+    private Context context;
 
     public Mensajeria(ListView lv, Context context){
         this.lv = lv;
@@ -48,24 +48,12 @@ public class Mensajeria extends AsyncTask<String, Integer, String>{
     @Override
     protected String doInBackground(String... params) {
         StringBuilder text = new StringBuilder();
-        URL url = null;
         try {
             // Agafam la URL que s'ha passat com argument
-            url = new URL(params[0]);
+            URL url = new URL("http://iesmantpc.000webhostapp.com/public/usuari/");
             // Feim la connexió a la URL
             HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection();
-            httpURLConnection.setReadTimeout(15000);
-            httpURLConnection.setChunkedStreamingMode(25000);
-            httpURLConnection.setRequestMethod("POST");
-            httpURLConnection.setDoInput(true);
-            httpURLConnection.setDoOutput(true);
             httpURLConnection.connect();
-            OutputStream out = httpURLConnection.getOutputStream();
-            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(out, "UTF-8"));
-            //writer.write(montaParametres(params));
-            writer.flush();
-            writer.close();
-            out.close();
             // Codi de la resposta
             responseCode = httpURLConnection.getResponseCode();
             Log.d("RUN", "Descarrega "+responseCode);
@@ -78,8 +66,6 @@ public class Mensajeria extends AsyncTask<String, Integer, String>{
                 }
                 in.close();
             }
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -99,10 +85,10 @@ public class Mensajeria extends AsyncTask<String, Integer, String>{
             JSONObject json = new JSONObject(result);
             JSONArray jArray = json.getJSONArray("dades");
             // Llista de descarregues
-            ArrayList<HashMap<String, String>> llista = new ArrayList<HashMap<String, String>>();
+            ArrayList<HashMap<String, String>> llista = new ArrayList<>();
             // Guarda a la llista
             for (int i = 0; i < jArray.length(); i++) {
-                HashMap<String, String> map = new HashMap<String, String>();
+                HashMap<String, String> map = new HashMap<>();
                 JSONObject jObject = jArray.getJSONObject(i);
                 map.put("ID",jObject.getString("id"));
                 map.put("NOM",jObject.getString("nom"));

@@ -1,13 +1,16 @@
 package com.example.cristian.descargartexto;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
+import android.os.StrictMode;
 import android.util.Log;
 import android.view.View;
-import android.widget.ListView;
-import android.widget.TextView;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -15,26 +18,28 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
-import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLEncoder;
-import java.util.HashMap;
-import java.util.Map;
 
 public class MainActivity extends Activity {
 
     private ReceptorXarxa receptor;
-    private URL url;
-    private TextView user;
-    private TextView pass;
+    private final int LOGIN = 1;
+    private Intent intent;
+    private Preferencies pref;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        pref = new Preferencies(this);
 
+        StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+        StrictMode.setThreadPolicy(policy);
 
+        if (connection(pref.getUser(), pref.getPassword())) {
+            intent = new Intent(this, LogIn.class);
+            startActivityForResult(intent, LOGIN);
+        }
 
         setContentView(R.layout.activity_main);
 
@@ -42,59 +47,10 @@ public class MainActivity extends Activity {
 
         receptor = new ReceptorXarxa();
         this.registerReceiver(receptor, filter);
-
-        user = findViewById(R.id.user);
-        pass = findViewById(R.id.pass);
     }
 
-    protected void descarga(View view){
-        // Executam l'AsyncTask passant-li com a argument la ruta de l'imatge.
-        String url="https://iesmant.000webhostapp.com/public/usuari/";
-        Log.d("RUN", url);
-        //new Mensajeria(lv, this).execute(url);
-    }
-
-    public void preLogIn(View view){
-
-        if (){}
-    }
-
-    public String LogIn(HashMap<String, String> params){
-        StringBuilder text = new StringBuilder();
-        try {
-            // Agafam la URL que s'ha passat com argument
-            url = new URL("http://iesmantpc.000webhostapp.com/public/login/");
-            // Feim la connexió a la URL
-            HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection();
-            httpURLConnection.setReadTimeout(15000);
-            httpURLConnection.setChunkedStreamingMode(25000);
-            httpURLConnection.setRequestMethod("POST");
-            httpURLConnection.setDoInput(true);
-            httpURLConnection.setDoOutput(true);
-            OutputStream out = httpURLConnection.getOutputStream();
-            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(out, "UTF-8"));
-            //writer.write(montaParametres(params));
-            writer.flush();
-            writer.close();
-            out.close();
-            // Codi de la resposta
-            int responseCode = httpURLConnection.getResponseCode();
-            Log.d("RUN", "Descarrega "+responseCode);
-            if (responseCode == HttpURLConnection.HTTP_OK) {
-                // Recollim texte
-                BufferedReader in = new BufferedReader(new InputStreamReader(httpURLConnection.getInputStream()));
-                String liniatxt;
-                while ((liniatxt = in.readLine()) != null) {
-                    text.append(liniatxt);
-                }
-                in.close();
-            }
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return text.toString();
+    protected void mostrar(View view) {
+        new Mensajeria(lv, this).execute();
     }
 
     public void onDestroy() {
@@ -105,20 +61,72 @@ public class MainActivity extends Activity {
         }
     }
 
-    private static String montaParametres(HashMap<String, String> params) throws
-            UnsupportedEncodingException {
-        // A partir d'un hashmap clau-valor cream
-        // clau1=valor1&clau2=valor2&...
-        StringBuilder result = new StringBuilder();
-        boolean first = true;
-        for(Map.Entry<String, String> entry : params.entrySet()){
-            if (first) { first = false;} else {result.append("&");}
-            result.append(URLEncoder.encode(entry.getKey(), "UTF-8"));
-            result.append("=");
-            result.append(URLEncoder.encode(entry.getValue(), "UTF-8"));
+    private Boolean connection(String user, String pass) {
+        StringBuilder text = new StringBuilder();
+        Boolean result = false;
+        try {
+            // Agafam la URL que s'ha passat com argument
+            URL url = new URL("http://iesmantpc.000webhostapp.com/public/login/");
+            // Feim la connexió a la URL
+            HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection();
+            httpURLConnection.setReadTimeout(15000);
+            httpURLConnection.setChunkedStreamingMode(25000);
+            httpURLConnection.setRequestMethod("POST");
+            httpURLConnection.setDoInput(true);
+            httpURLConnection.setDoOutput(true);
+            OutputStream out = httpURLConnection.getOutputStream();
+            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(out, "UTF-8"));
+            writer.write(user + "&" + pass);
+            writer.flush();
+            writer.close();
+            out.close();
+            // Codi de la resposta
+            int responseCode = httpURLConnection.getResponseCode();
+            Log.d("RUN", "Descarrega " + responseCode);
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                // Recollim texte
+                BufferedReader in = new BufferedReader(new InputStreamReader(httpURLConnection.getInputStream()));
+                String liniatxt;
+                while ((liniatxt = in.readLine()) != null) {
+                    text.append(liniatxt);
+                }
+                in.close();
+            }
+            if (!text.toString().trim().isEmpty()) {
+                JSONObject json = new JSONObject(text.toString());
+                result = json.getBoolean("correcta");
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (JSONException e) {
+            Log.d("JSON_ERROR", e.getMessage());
         }
-        return result.toString();
+
+        return result;
     }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+
+        if (requestCode == LOGIN) {
+            if (resultCode == Activity.RESULT_OK) {
+
+                try {
+                    JSONObject user = new JSONObject(data.getStringExtra("user"));
+                    pref.setCodiusuari(Integer.parseInt(user.getString("codiusuari")));
+                    pref.setUser(user.getString("nom"));
+                    pref.setToken(user.getString("token"));
+                    pref.setPassword(data.getStringExtra("pass"));
+                } catch (JSONException e) {
+                    Log.d("JSON_ERROR", e.getMessage());
+                }
+
+            }
+            if (resultCode == Activity.RESULT_CANCELED) {
+                intent = new Intent(this, LogIn.class);
+            }
+        }
+    }//onActivityResult
 
 }
 
